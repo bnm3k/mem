@@ -1,13 +1,21 @@
 .SILENT:
-.DEFAULT_GOAL:=build
+.DEFAULT_GOAL:=help
 
-.PHONY: run build clean
+.PHONY: help clean
 
 FLAGS:=-Wall -g -O2
 
-build: bench_orig.c bench_rdtscp.c common.c common.h
-	gcc $(FLAGS) -o bench_orig bench_orig.c common.c
-	gcc $(FLAGS) -o bench_rdtscp bench_rdtscp.c common.c
+help:
+	echo 'paoloni bench'
+
+bench_orig: bench_orig.c common.c
+	gcc $(FLAGS) -o bench_orig $^
+
+bench_rdtscp: bench_rdtscp.c common.c
+	gcc $(FLAGS) -o bench_rdtscp $^
+
+bench_lfence: bench_lfence.c common.c
+	gcc $(FLAGS) -o bench_lfence $^
 
 clean:
 	rm -rf bench_orig bench_rdtscp

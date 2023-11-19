@@ -1,2 +1,3 @@
 bench_orig
 bench_rdtscp
+bench_lfence
