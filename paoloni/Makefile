@@ -1,18 +1,13 @@
 .SILENT:
-.DEFAULT_GOAL:=run
+.DEFAULT_GOAL:=build
 
 .PHONY: run build clean
 
 FLAGS:=-Wall -g -O2
-BIN:=bench
 
-$(BIN): ./bench.c
-	gcc $(FLAGS) -o $@ $^
-
-build: $(BIN)
-
-run: $(BIN)
-	./$^
+build: bench_orig.c bench_rdtscp.c common.c common.h
+	gcc $(FLAGS) -o bench_orig bench_orig.c common.c
+	gcc $(FLAGS) -o bench_rdtscp bench_rdtscp.c common.c
 
 clean:
-	rm -rf bench
+	rm -rf bench_orig bench_rdtscp
