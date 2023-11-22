@@ -1,0 +1,15 @@
+Language: Cpp
+BasedOnStyle: LLVM
+AlignConsecutiveAssignments: true
+AlignTrailingComments: true
+AllowAllParametersOfDeclarationOnNextLine: true
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: true
+BinPackParameters: false
+BreakBeforeBraces: Attach
+ColumnLimit: 80
+IndentCaseLabels: false
+IndentGotoLabels: false
+IndentWidth: 4
+PointerAlignment: Left
+SortIncludes: true
