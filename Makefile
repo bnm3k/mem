@@ -3,7 +3,7 @@
 
 .PHONY: run build clean
 
-FLAGS:=-Wall -g -O2
+FLAGS:=-Wall -g -O2 -D _GNU_SOURCE
 BIN:=a.out
 
 $(BIN): src/main.c
@@ -12,7 +12,7 @@ $(BIN): src/main.c
 build: $(BIN)
 
 run: $(BIN)
-	taskset -cp 4 ./$^
+	./$^
 
 clean:
 	rm -rf a.out

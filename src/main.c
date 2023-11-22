@@ -1,10 +1,16 @@
 #include <math.h>
+#include <sched.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-#include <stdint.h>
-
 #include <x86intrin.h>
+
+void assign_to_core(int core_id) {
+    cpu_set_t mask;
+    CPU_ZERO(&mask);
+    CPU_SET(core_id, &mask);
+    sched_setaffinity(0, sizeof(mask), &mask);
+}
 
 uint64_t inline read_ts_counter() {
     uint32_t lo = 0, hi = 0;
@@ -26,25 +32,23 @@ void sum(int* nums, size_t n, int* res) {
     *res = s;
 }
 
-int other() {
-    size_t n  = 10000;
+int main() {
+    printf("cpu=%d\n", sched_getcpu());
+    assign_to_core(4);
+    printf("cpu=%d\n", sched_getcpu());
+    size_t n  = 1000000000;
     int* nums = malloc(sizeof(int) * n);
     fill(nums, n);
     int res;
 
-    uint64_t t1 = __rdtsc();
     // benchmark
     uint64_t start = read_ts_counter();
     sum(nums, n, &res);
-    uint64_t t2  = __rdtsc();
     uint64_t end = read_ts_counter();
 
-    printf("res=%d, cycles taken:\n%lu\n%lu\n", res, (end - start), (t2 - t2));
+    printf("res=%d, cycles taken:\n%lu\n", res, (end - start));
 
     free(nums);
-    return 0;
-}
-
-int main() {
+    printf("cpu=%d\n", sched_getcpu());
     return 0;
 }
