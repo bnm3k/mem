@@ -1,20 +1,6 @@
-# Microbenchmarking: way more than I set out to know
+# Microbenchmarking: Way more than I set out to know
 
-## References
-
-1. Intel Manual
-2. How to Benchmark Code Execution Times n Intel IA-32 and IA-64 Instruction Set
-   Architectures - Gabriele Paoloni - September 2010
-3. [How to write benchmarks in Go - Dave Cheney](https://dave.cheney.net/2013/06/30/how-to-write-benchmarks-in-go)
-4. [MSR & MSR_FASE - Energy Efficiency in HPC - PTC Lecture slide](https://events.it4i.cz/event/39/attachments/150/349/09-2020-01-30_MSR_SAFE.pdf)
-5. [How to get the CPU cycle count in x86_64 from C++? - StackOverflow](https://stackoverflow.com/questions/13772567/how-to-get-the-cpu-cycle-count-in-x86-64-from-c)
-6. [The microarchitecture of Intel, AMD and VIA CPUs - Agner Fog - Software Optimization Resources](https://www.agner.org/optimize/microarchitecture.pdf)
-7. [Comments on timing short code sections on Intel processors - John McCalpin -
-   blog](https://sites.utexas.edu/jdm4372/2018/07/23/comments-on-timing-short-code-sections-on-intel-processors/)
-8. [Game Timing and Multicore Processors - Microsoft Documentation](https://learn.microsoft.com/en-us/windows/win32/dxtecharts/game-timing-and-multicore-processors?redirectedfrom=MSDN)
-9. [SERIALIZE - serialize instruction execution - Felix Cloutier - x86 and amd64 instruction reference - derived from Intel's](https://www.felixcloutier.com/x86/serialize)
-
-## Introduction
+## Intro
 
 Benchmarking in systems programming is quite a different beast from what I'm
 used to. My past experience has been with higher level language tooling where I
@@ -24,21 +10,22 @@ In C & low-level programming though, all of a sudden there's talk of accuracy,
 clock precision, kinds of clocks, granularity of the benchmark, cycles spent,
 statistical rigor and a whole other bunch of stuff I've never really put that
 much thought into. What's more, there's as much concern for the _why_ as there
-is for the _how_, if not more: is the benchmark even useful, what's its goal,
-what would the results portend for the overall system. It's quite easy to end up
-getting hyperfixated on some piece of code that doesn't even contribute much to
-overall runtime or instead increases performance at the expense of some other
-resource.
+is for the _how_, if not more: is the benchmark even useful, what's its goal, am
+I making the correct comparisons, what would the results portend for the overall
+system and so on. It's quite easy to end up getting hyperfixated on some piece
+of code that doesn't even contribute much to overall runtime or instead
+increases performance at the expense of some other critical resource.
 
-To be fair, the same kind of attention should (and ought to) carry over to
-higher-level environments, it just so happens that there's more material and
+To be fair, the same kind of attention ought to and does carry over to
+higher-level development, it just so happens that there's more material and
 practitioners concerned with the finer details of benchmarking in systems
 programming. Lower level components don't change as much so a lot of the
 development effort and expertise tends towards debugging and improving
 performance - hence the over-representation.
 
 So this post details (in a mostly informal manner) all the stuff I picked up
-while trying to figure out how to carry out microbenchmarks in C and Linux.
+while trying to figure out how to carry out microbenchmarks in C (Linux, Intel
+x86-64).
 
 ## Measuring clock cycles
 
@@ -61,7 +48,7 @@ assembly has to be done carefully since the RDTSC instruction overwrites the EAX
 and EDX registers - you don't want to end up with a segmentation fault, or
 worse.
 
-```C
+```c
 #include <stdint.h>
 
 uint64_t inline rdtsc() {
@@ -73,7 +60,7 @@ uint64_t inline rdtsc() {
 
 As a working example, let's benchmark a simple add function using RDTSC:
 
-```C
+```c
 void sum(int* nums, size_t n, int* res) {
     int s = 0;
     for (size_t i = 0; i < n; i++) {
@@ -86,7 +73,7 @@ void sum(int* nums, size_t n, int* res) {
 To get the number of cycles a piece of code takes, we read the counter at the
 start of the benchmark, then at the end:
 
-```C
+```c
 int main() {
     // ...
 
@@ -109,7 +96,7 @@ even though the values keep on wobbling with each run, there's a typical result.
 
 Next step then is to comb around for how other folks address this noise
 (variability in time taken) when benchmarking. Given it's referenced a lot, my
-first goto was Intel's guide on benchmarking, penned by Gabriele Paoloni [2].
+first go-to was Intel's guide on benchmarking, penned by Gabriele Paoloni [2].
 
 Right at the start, the Paoloni points out two sources of noise when using
 RDTSC:
@@ -119,7 +106,7 @@ RDTSC:
 
 Let's start with the former:
 
-## Out of order processing
+## Out of order execution
 
 Modern Intel CPU carry out out-of-order execution for instructions. From Agner
 Fog's Software Optimization Resources [6], out-of-order execution is described
@@ -140,7 +127,7 @@ The Paoloni guide offers a solution - place a serializing instruction before
 RDTSC. Such instructions ensure that the CPU has completed all preceding
 instructions before continuing: "all modifications to flags, registers, and
 memory by previous instructions are completed, draining all buffered writes to
-memory" [9]. The serializing instruction used is CPUID which is used to retrieve
+memory" [8]. The serializing instruction used is CPUID which is used to retrieve
 processor identification and feature information [1]. Thus, we end up with the
 following pseudocode:
 
@@ -252,10 +239,11 @@ the compiler hasn't done anything mischievous yet to warrant compiler barriers.
 
 ## CSAPP benchmarking methodology
 
-An alternative to the Paoloni methodology that I've come across is the CSAPP one
-that Bryant & O'Hallaron use throughout the code samples for their Computer
-Systems textbook. It still uses RDTSC under the hood but differs in the way they
-pick the representative/typical measurement value:
+An alternative to the Paoloni methodology that I've come across is the
+[CSAPP](https://csapp.cs.cmu.edu/3e/code.html) one that Bryant & O'Hallaron use
+throughout the code samples for their Computer Systems textbook. It still uses
+RDTSC under the hood but differs in the way they pick the representative/typical
+measurement value:
 
 The benchmark involves 3 main knobs to configure:
 
@@ -284,6 +272,9 @@ However, I do have some pending questions:
 
 - why is the minimum considered the 'final' value, why not something like median
   or mode. The Paoloni guide also picks the minimum.
+  ([Answer](https://ocw.mit.edu/courses/6-172-performance-engineering-of-software-systems-fall-2018/resources/lecture-10-measurement-and-timing/):
+  compared to the mean or even the median, the minimum does best at noise
+  rejection)
 - why doesn't it take into account the possibility of out-of-order execution.
   The code is open-source though, so I added serializing instructions to mine
   just in case the processor does its thing.
@@ -303,7 +294,7 @@ period.
 
 The guide's solution is to write the benchmark as a kernel module and right
 within the benchmark section, disable pre-emption and guarantee exclusive
-ownership of the CPU.
+ownership of the CPU core.
 
 I guess I'll have to bite the bullet and learn kernel module programming at some
 point so as to use this method though I'm a bit hesitant for now: I don't want
@@ -311,11 +302,11 @@ to end up doing something really dumb and breaking my system.
 
 For the time being, a workable solution seems to be some variant of either using
 the [`taskset`](https://man7.org/linux/man-pages/man1/taskset.1.html) command to
-run the entire benchmark with a given CPU affinity or to set
+run the entire benchmark with a given CPU core affinity or to set
 process/thread-level CPU affinity directly within the code using the
 `sched_setaffinity` function:
 
-```C
+```c
 #include <sched.h>
 
 void assign_to_core(int core_id) {
@@ -344,8 +335,8 @@ time taken = cycles/frequency
 So we need to get RDTSC's frequency and plug it above.
 
 Using the cli tool `dmidecode` to retrieve the nominal value, I get 2600 MHz
-(2.6 GHz). There are two values, but luckily I don't have to disambiguate them
-since they're both the same :).
+(2.6 GHz). There are two values, luckily I don't have to disambiguate them since
+they're both the same :).
 
 ```
 $ sudo dmidecode -t processor | grep 'Speed'
@@ -363,7 +354,7 @@ uses the `sleep` function to do the waiting (an updated version might use
 I used the code sample below to calculate the frequency. It's adopted from
 [here](https://github.com/cmuratori/computer_enhance/blob/main/perfaware/part2/listing_0073_cpu_timer_guessfreq_main.cpp).
 
-```C
+```c
 #include <stdint.h>
 #include <stdio.h>
 #include <time.h>
@@ -424,3 +415,96 @@ There seems to be a base/processor frequency and a TSC frequency and both are
 quite close though not quite equal. Anyway, since I was doing the conversion to
 wall clock time as a final reporting step, I decided to go with the calculated
 approximate value (2.5925).
+
+## Conclusion: Down the Systems Rabbit Hole
+
+The running theme so far has been that without accounting for how some
+lower-level component actually works, whether it's the CPU's out-of-order
+execution or interrupts caused by the OS, we risk deriving erroneous values.
+
+So far, I've only scratched the surface. To make microbenchmarking measurements
+sensible, there's a lot more that we've got to account for:
+
+1. **BIOS Settings** - Paoloni mentions that BIOS settings have to be optimized
+   to remove all factors that could cause indeterminism, though he doesn't
+   specifier which ones - some could be peculiar to his computer.
+2. **Hyperthreading**: CPUs can run two threads on the same physical cores with
+   both sharing the same L1 and L2 cache. It's recommended to turn off
+   hyperthreading when benchmarking so as to increase reproducibility [2].
+3. **CPU Power management**: Core frequencies can be lowered or even paused
+   entirely to reduce temperature and power consumption. This should also be
+   disabled when benchmarking - for the same reasons [2].
+4. **Turbo boost**: Given CPU-intensive workloads - Intel CPUs can increase
+   frequency way above the nominal value. Once more, this should be disabled
+   when benchmarking [2]. An implication of both this point and the previous one
+   is that the actual frequency of our program varies throughout its lifetime -
+   even though the TSC frequency remains invariant.
+5. **Cache effects**: Code might run slower the first time due to cache misses.
+   Both the CSAPP and Paoloni code involve some warm up steps for both
+   instructions and data to reduce variability.
+6. **Program's memory layout**. Turns out the link order, environment variables
+   and even the directory from which we run our program can cause our code to
+   run slower/faster than it should (as detailed in Mytkowicz et al's paper
+   ['Producing Wrong Data Without Doing Anything Obviously Wrong!'](https://users.cs.northwestern.edu/~robby/courses/322-2013-spring/mytkowicz-wrong-data.pdf)).
+   All these change the layout of a program once it's loaded which in turn
+   affects caching, TLB lookups, prefetching & branch predictions. To derive
+   meaningful benchmark results, Charlie Curtsinger and Emery D. Berger propose
+   [Stabilizer](https://people.cs.umass.edu/~emery/pubs/stabilizer-asplos13.pdf),
+   a tool that repeatedly randomizes a program's memory layout so to eliminate
+   its effect in measurements. Emery has a great intro on how Stabilier works in
+   his 2019 Strange Loop talk
+   ['Performance Matters'](https://www.youtube.com/watch?v=r-TLSBdHe1A).
+7. **Correctness**: this should go without mentioning but as Tim Harris points
+   out in
+   [Five ways not to fool yourself](https://timharris.uk/misc/five-ways.pdf),
+   incorrect algorithms are often fast. One might place lightweight correctness
+   checks throughout the code or even as a post-benchmarking step.
+8. **Configuration**: Ideally, this should fall under correctness but it's worth
+   having it as its own separate point - after all
+   [configuration mishaps do cause a huge chunk of production failures](https://blog.acolyer.org/2016/11/29/early-detection-of-configuration-errors-to-reduce-failure-damage/).
+   Values used in execution should match the configuration values, or better
+   yet, as Tim Harris recommends, always collect values from the execution
+   rather than from the config - it'll be easier to spot any mismatch that
+   arises [9].
+9. **The 'overall' system** - Gernot Heiser puts it best in
+   [System Benchmarking Crimes](http://gernot-heiser.org/benchmarking-crimes.html#ubm):
+   "Micro-benchmarks specifically probe a particular aspect of a system. Even if
+   they are very comprehensive, they will not be representative of overall
+   system performance. Macro-benchmarks (representing real-world workloads) must
+   be used to provide a realistic picture of overall performance". The least we
+   can do when carrying out microbenchmarks is to ensure the workloads are
+   meaningful and represent production settings. On a similar note, Curtsinger &
+   Emery Berger created [Coz](https://github.com/plasma-umass/coz) - a causal
+   profiling tool that narrows down which parts of the codebase ought to be
+   optimized in order to actually increase overall performance. The 'Performance
+   Matters' video also goes over Coz in the second half.
+10. **Actual audible noise** -
+    [shouting at your hard disk makes it slower X`D](https://www.youtube.com/watch?v=tDacjrSCeq4),
+    please don't.
+
+Even with benchmarking, you can see why computer science programs have some
+mandatory systems classes and even self-taught programmers are
+[highly encouraged](https://teachyourselfcs.com/) to learn systems development.
+A lot of these stuff won't directly apply to day-to-day programming but code
+doesn't run on abstract machines - all software ultimately runs on systems (well
+duh) and it's worth understanding the foundations upon which we're building on.
+
+## References & Further Reading
+
+1. [Intel® 64 and IA-32 Architectures Software Developer Manuals](https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html)
+2. How to Benchmark Code Execution Times in Intel IA-32 and IA-64 Instruction
+   Set Architectures - Gabriele Paoloni - September 2010
+3. [How to write benchmarks in Go - Dave Cheney](https://dave.cheney.net/2013/06/30/how-to-write-benchmarks-in-go)
+4. [MSR & MSR_FASE - Energy Efficiency in HPC - PTC Lecture slide - pdf](https://events.it4i.cz/event/39/attachments/150/349/09-2020-01-30_MSR_SAFE.pdf)
+5. [How to get the CPU cycle count in x86_64 from C++? - StackOverflow](https://stackoverflow.com/questions/13772567/how-to-get-the-cpu-cycle-count-in-x86-64-from-c)
+6. [The microarchitecture of Intel, AMD and VIA CPUs - Agner Fog - Software Optimization Resources - pdf](https://www.agner.org/optimize/microarchitecture.pdf)
+7. [Comments on timing short code sections on Intel processors - John McCalpin -
+   blog](https://sites.utexas.edu/jdm4372/2018/07/23/comments-on-timing-short-code-sections-on-intel-processors/)
+8. [SERIALIZE - serialize instruction execution - Felix Cloutier - x86 and amd64 instruction reference - derived from Intel's](https://www.felixcloutier.com/x86/serialize)
+9. [Five ways not to fool yourself - Tim Harris - pdf](https://timharris.uk/misc/five-ways.pdf)
+10. [sled theoretical performance guide - Tyler Neely](https://sled.rs/perf.html)
+11. [Producing Wrong Data Without Doing Anything Obviously Wrong! - Mytkowicz et al - pdf](https://users.cs.northwestern.edu/~robby/courses/322-2013-spring/mytkowicz-wrong-data.pdf)').
+12. [Stabilizer - Charlie Curtsinger, Emery D. Berger - pdf](https://people.cs.umass.edu/~emery/pubs/stabilizer-asplos13.pdf),
+13. [Performance Matters - Emery Berger - Video](https://www.youtube.com/watch?v=r-TLSBdHe1A)
+14. [Coz: Finding Code that Counts - Charlie Curtsinger, Emery D. Berger](https://github.com/plasma-umass/coz)
+15. [System Benchmarking Crimes - Gernot Heiser](http://gernot-heiser.org/benchmarking-crimes.html)
