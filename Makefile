@@ -7,7 +7,7 @@ FLAGS:=-Wall -g -O2 -D _GNU_SOURCE
 BIN:=a.out
 
 $(BIN): src/main.c
-	gcc $(FLAGS) -o $@ $^
+	gcc $(FLAGS) -o $@ $^ -lrt
 
 build: $(BIN)
 
