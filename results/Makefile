@@ -7,7 +7,7 @@ venv:
 	test -d $(VENV_DIR) || python3 -m venv $(VENV_DIR)
 
 add_results:
-	python3 results/add_results.py
+	python3 add_results.py
 
 notebook:
 	jupyter notebook

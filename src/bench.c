@@ -3,73 +3,90 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
+#include <string.h>
 #include <x86intrin.h>
 
 #include "bench.h"
 #include "clock.h"
 
-static double* k_min_samples = NULL;
-int samplecount              = 0;
-
-#define KEEP_VALS 1
-#define KEEP_SAMPLES 1
-
+// create new sampling process
+bench_t* new_bench(int k, double epsilon, int max_samples, bool clear_cache) {
+    bench_t* b       = calloc(sizeof(bench_t), 1);
+    b->k_min_samples = calloc(k, sizeof(double));
 #if KEEP_SAMPLES
-static double* all_samples = NULL;
+    b->all_samples = calloc(max_samples + k, sizeof(double));
 #endif
+    b->epsilon      = epsilon;
+    b->k            = k;
+    b->sample_count = 0;
+    b->max_samples  = max_samples;
+    b->clear_cache  = clear_cache;
 
-// start new sampling process
-static void init_sampler(int k, int maxsamples) {
-    if (k_min_samples) free(k_min_samples);
-    k_min_samples = calloc(k, sizeof(double));
+    return b;
+}
+
+bench_t* new_bench_default(void) {
+    return new_bench(3, 0.01, 500, false);
+}
+
+void bench_reset(bench_t* b) {
+    b->sample_count = 0;
+    // set k_min_samples to zero
+    memset(b->k_min_samples, 0, b->k * sizeof(double));
+    // set all samples to zero
 #if KEEP_SAMPLES
-    if (all_samples) free(all_samples);
-    all_samples = calloc(maxsamples + k, sizeof(double));
+    memset(b->all_samples, 0, (b->k + b->max_samples) * sizeof(double));
 #endif
-    samplecount = 0;
+}
+void free_bench(bench_t* b) {
+#if KEEP_SAMPLES
+    free(b->all_samples);
+#endif
+    free(b->k_min_samples);
+    free(b);
 }
 
 // add new sample
-void add_sample(double val, int k) {
+static void bench_add_sample(bench_t* b, double val) {
     int pos = 0;
-    if (samplecount < k) {
+    if (b->sample_count < b->k) {
         // so for, only have samplecount < k (default k = 3)
-        pos                = samplecount;
-        k_min_samples[pos] = val;
-    } else if (val < k_min_samples[k - 1]) {
+        pos                   = b->sample_count;
+        b->k_min_samples[pos] = val;
+    } else if (val < b->k_min_samples[b->k - 1]) {
         // samplecount == k
         // if new val is less than max, remove max
-        pos                = k - 1;
-        k_min_samples[pos] = val;
+        pos                   = b->k - 1;
+        b->k_min_samples[pos] = val;
     }
 
 #if KEEP_SAMPLES
-    all_samples[samplecount] = val;
+    b->all_samples[b->sample_count] = val;
 #endif
 
-    samplecount++;
+    b->sample_count++;
 
     // insertion sort
     // 0th position - smallest val
     // (k-1) position - largest val
-    while (pos > 0 && k_min_samples[pos - 1] > k_min_samples[pos]) {
-        double temp            = k_min_samples[pos - 1];
-        k_min_samples[pos - 1] = k_min_samples[pos];
-        k_min_samples[pos]     = temp;
+    while (pos > 0 && b->k_min_samples[pos - 1] > b->k_min_samples[pos]) {
+        double temp               = b->k_min_samples[pos - 1];
+        b->k_min_samples[pos - 1] = b->k_min_samples[pos];
+        b->k_min_samples[pos]     = temp;
         pos--;
     }
 }
 
 // get current minimum
-double get_min() {
-    return k_min_samples[0];
+double bench_get_min(bench_t* b) {
+    return b->k_min_samples[0];
 }
 
 // what is the relative error for the kth smallest sample
-double err(int k) {
-    if (samplecount < k) return 1000.0;
-    return (k_min_samples[k - 1] - k_min_samples[0]) / k_min_samples[0];
+double bench_err(bench_t* b) {
+    int k = b->k;
+    if (b->sample_count < k) return 1000.0;
+    return (b->k_min_samples[-1] - b->k_min_samples[0]) / b->k_min_samples[0];
 }
 
 // have k minimum measurements converged
@@ -77,11 +94,11 @@ double err(int k) {
 // returns 0 if not converted
 // returns samplecount if converged
 // returns -1 if can't reach convergence
-int has_converged(int k, double epsilon, int maxsamples) {
-    if ((samplecount >= k) &&
-        ((1 + epsilon) * k_min_samples[0] >= k_min_samples[k - 1]))
-        return samplecount;
-    if ((samplecount < maxsamples)) {
+int bench_has_converged(bench_t* b) {
+    if ((b->sample_count >= b->k) &&
+        ((1 + b->epsilon) * b->k_min_samples[0] >= b->k_min_samples[b->k - 1]))
+        return b->sample_count;
+    if (b->sample_count < b->max_samples) {
         return 0; // not converged yet
     } else {
         return -1; // can't reach convergence
@@ -100,48 +117,23 @@ static void do_clear_cache() {
 }
 
 // compute time used by function f
-double bench(mm_fn f,
-             const size_t N,
-             double A[N][N],
-             double B[N][N],
-             double C[N][N],
-             bool clear_cache) {
-    return bench_full(f, N, A, B, C, clear_cache, 3, 0.01, 500, 0);
-}
-
-// routines used to help with analysis
-double bench_full(mm_fn f,
-                  const size_t N,
-                  double A[N][N],
-                  double B[N][N],
-                  double C[N][N],
-                  bool clear_cache,
-                  int k,
-                  double epsilon,
-                  int maxsamples,
-                  bool compensate) {
-    void (*do_start_counter)() = start_counter;
-    double (*do_get_counter)() = get_counter;
-    if (compensate) {
-        do_start_counter = start_comp_counter;
-        do_get_counter   = get_comp_counter;
-    }
-    init_sampler(k, maxsamples);
+double bench_run(bench_t* b,
+                 mm_fn f,
+                 const size_t N,
+                 double A[N][N],
+                 double B[N][N],
+                 double C[N][N]) {
     do {
-        if (clear_cache) do_clear_cache();
+        if (b->clear_cache) do_clear_cache();
         f(N, A, B, C); // warm cache
 
-        do_start_counter();
+        uint64_t start = read_CPU_tsc();
         f(N, A, B, C);
-        double cyc = do_get_counter();
-        add_sample(cyc, k);
-    } while (!has_converged(k, epsilon, maxsamples) &&
-             samplecount < maxsamples);
-    double result = k_min_samples[0];
-#if !KEEP_VALS
-    free(values);
-    values = NULL;
-#endif
+        uint64_t end  = read_CPU_tsc();
+        double cycles = get_duration(start, end);
+        bench_add_sample(b, cycles);
+    } while (bench_has_converged(b) == 0 && b->sample_count < b->max_samples);
+    double result = bench_get_min(b);
     return result;
 }
 
@@ -150,31 +142,4 @@ void assign_to_core(int core_id) {
     CPU_ZERO(&mask);
     CPU_SET(core_id, &mask);
     sched_setaffinity(1, sizeof(mask), &mask);
-}
-
-static inline uint64_t read_OS_timer_ns(void) {
-    struct timespec now;
-    clockid_t clock_id = CLOCK_MONOTONIC;
-    clock_gettime(clock_id, &now);
-    uint64_t now_ns = (now.tv_sec * 1000000000) + now.tv_nsec;
-    return now_ns;
-}
-
-double get_cpu_frequency_GHz(uint64_t wait_time_milliseconds) {
-    uint64_t os_start_ns = 0, os_end_ns = 0, os_elapsed_ns = 0;
-    uint64_t os_wait_time_ns = wait_time_milliseconds * 1000000;
-
-    uint64_t cpu_start = __rdtsc();          // read CPU start
-    os_start_ns        = read_OS_timer_ns(); // read start OS time
-
-    // wait until wait_time duration is over
-    while (os_elapsed_ns < os_wait_time_ns) {
-        os_end_ns     = read_OS_timer_ns();
-        os_elapsed_ns = os_end_ns - os_start_ns;
-    }
-
-    uint64_t cpu_end    = __rdtsc();
-    uint64_t cpu_cycles = cpu_end - cpu_start;
-
-    return (double)cpu_cycles / (double)os_elapsed_ns;
 }

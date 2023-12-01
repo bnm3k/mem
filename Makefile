@@ -16,7 +16,7 @@ run: $(BIN)
 
 bench: $(BIN)
 	rm -f results/results.csv
-	./$^ > results/results.csv
+	./$^ | tee -a results/results.csv
 
 clean:
 	rm -rf a.out

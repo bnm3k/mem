@@ -9,25 +9,28 @@ import duckdb
 def init_db(conn):
     conn.sql(
         """
-    create sequence if not exists seq_bench_id start 1;
+    create sequence seq_bench_id start 1;
 
-    create table if not exists benchmark(
+    create table benchmark(
         id INTEGER PRIMARY KEY DEFAULT nextval('seq_bench_id'),
         description VARCHAR,
         hash BLOB NOT NULL UNIQUE,
         ts_added TIMESTAMP NOT NULL,
-        cycles_frequency_GHz DOUBLE NOT NULL,
+        frequency_GHz DOUBLE NOT NULL,
+        num_samples INTEGER NOT NULL,
+        convergence INTEGER NOT NULL,
+        k INTEGER NOT NULL,
+        epsilon DOUBLE NOT NULL
     );
 
-    create table if not exists results(
+    create type FN_TYPE
+        as ENUM('jki', 'kji', 'jik', 'ijk','kij', 'ikj');
+
+    create table results_cycles(
         bench_id INTEGER NOT NULL REFERENCES benchmark(id),
         N INTEGER NOT NULL,
-        jki DOUBLE NOT NULL,
-        kji DOUBLE NOT NULL,
-        jik DOUBLE NOT NULL,
-        ijk DOUBLE NOT NULL,
-        kij DOUBLE NOT NULL,
-        ikj DOUBLE NOT NULL
+        fn FN_TYPE NOT NULL,
+        cycles DOUBLE NOT NULL
     );
     """
     )
@@ -53,7 +56,11 @@ def main():
 
     # results_db = ":memory:"
     conn = duckdb.connect(results_db)
-    init_db(conn)
+    try:
+        init_db(conn)
+    except duckdb.CatalogException:
+        print("db already init")
+
     conn.sql(
         f"create temporary table raw_results as select * from '{results_csv}'"
     )
@@ -67,22 +74,28 @@ def main():
     # get timestamp
     timestamp = dt.datetime.now()
 
-    # get frequency
-    frequency = (
-        conn.sql("select frequency_GHz from raw_results limit 1").fetchone()
-        or (2600,)
-    )[0]
-
     # insert benchmark metadata
     bench_id = None
     try:
+        bench_metadata = conn.sql(
+            """
+            select frequency_GHz, num_samples, convergence, k, epsilon
+            from raw_results limit 1
+            """
+        ).fetchone()
+        benchmark = [description, md5_hash, timestamp]
+        if bench_metadata is not None:
+            benchmark.extend(bench_metadata)
+        else:
+            raise Exception("bench_metadata is None")
         bench_id = (
             conn.execute(
                 """insert into benchmark
-                 (description, hash, ts_added, cycles_frequency_GHz) values
-                 (?,?,?,?) returning id;
+                 (description, hash, ts_added, frequency_GHz,
+                 num_samples, convergence, k, epsilon)
+                 values (?,?,?,?,?,?,?,?) returning id;
                  """,
-                [description, md5_hash, timestamp, frequency],
+                benchmark,
             ).fetchone()
             or (None,)
         )[0]
@@ -94,15 +107,15 @@ def main():
 
     conn.execute(
         f"""
-        insert into results by name
-        select * exclude frequency_GHz
+        insert into results_cycles by name
+        select bench_id, N, trim(fn) as fn, cycles
         from raw_results,
         (select ? as bench_id)
         """,
         [bench_id],
     )
 
-    conn.sql("select * from results").show()
+    conn.sql("select * from results_cycles").show()
 
 
 if __name__ == "__main__":

@@ -1,23 +1,23 @@
 #ifndef CLOCK_H
 #define CLOCK_H
+#include <stdint.h>
 
-// start counter
-void start_counter();
+// read CPU TSC counter (cycles)
+uint64_t read_CPU_tsc(void);
 
-// get num of cycles since counter started
-double get_counter();
+// read OS timer (CLOCK_MONOTONIC, nanosecond resolution)
+uint64_t read_OS_timer_ns(void);
 
-// measure overhead of counter
-double get_counter_overhead();
+// helper function: get duration given start and end values from tsc
+double get_duration(uint64_t start, uint64_t end);
 
-// clock rate of processor
-double mhz(int verbose);
+// measure overhead of tsc counter
+double get_tsc_counter_overhead(void);
 
-// clock rate of processor - more control over accuracy
-double mhz_full(int verbose, int sleeptime);
+// get nominal CPU frequency by reading from /proc/cpuinfo
+double get_nomimal_CPU_frequency_GHz(void);
 
-// special counters that compensate for timer interrupt overhead
-void start_comp_counter();
-double get_comp_counter();
+// calculate clock rate by measuring cycles after waiting for given milliseconds
+double calc_CPU_frequency_GHz(uint64_t wait_time_milliseconds);
 
 #endif

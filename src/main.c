@@ -4,9 +4,10 @@
 #include <stdlib.h>
 
 #include "bench.h"
+#include "clock.h"
 
 #define MIN_N 50
-#define MAX_N 700
+#define MAX_N 1200
 #define INC_N 50
 
 static double A[MAX_N][MAX_N];
@@ -156,6 +157,7 @@ typedef struct {
 } matrix_multiply_t;
 
 int main(void) {
+    assign_to_core(4);
     srand(42);
 
     matrix_multiply_t matrix_multiply[] = {
@@ -191,28 +193,29 @@ int main(void) {
     size_t num_cases = sizeof(matrix_multiply) / sizeof(matrix_multiply[0]);
 
     // output header
-    printf("N, ");
-    for (size_t cs = 0; cs < num_cases; cs++) {
-        printf("%s, ", matrix_multiply[cs].name);
-    }
-    printf("frequency_GHz\n");
-    double frequency = get_cpu_frequency_GHz(100);
+    printf(
+        "N, fn, cycles, frequency_GHz, num_samples, convergence, k, epsilon\n");
+    double frequency = calc_CPU_frequency_GHz(100);
 
-    // get first comp
-    double n_cycles[num_cases];
+    bench_t* b = new_bench_default();
+    // clear cache after every run
+    b->clear_cache = true;
     for (size_t N = MIN_N; N <= MAX_N; N += INC_N) {
         for (size_t cs = 0; cs < num_cases; cs++) {
             fill_with_val(0.0, MAX_N, C);
-            double cycles = bench(matrix_multiply[cs].fn, N, A, B, C, false);
-            n_cycles[cs]  = cycles;
+            double ov = get_tsc_counter_overhead();
+            double cycles =
+                bench_run(b, matrix_multiply[cs].fn, N, A, B, C) - ov;
+            int convergence = bench_has_converged(b);
+            // output row
+            printf("%lu, %s, %f, %f, %d, %d, %d, %f\n", N,
+                   matrix_multiply[cs].name, cycles, frequency, b->max_samples,
+                   convergence, b->k, b->epsilon);
+            fflush(stdout);
         }
-        // output row
-        printf("%lu, ", N);
-        for (size_t cs = 0; cs < num_cases; cs++) {
-            printf("%f, ", n_cycles[cs]);
-        }
-        printf("%f\n", frequency);
+        bench_reset(b);
     }
+    free_bench(b);
 
     return 0;
 }

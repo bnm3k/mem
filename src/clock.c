@@ -2,21 +2,29 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/times.h>
+#include <time.h>
 #include <unistd.h>
 
 #include <x86intrin.h>
 
 #include "clock.h"
 
-static uint64_t start = 0;
+uint64_t inline read_CPU_tsc(void) {
+    uint32_t lo, hi;
+    __asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi));
+    return ((uint64_t)hi << 32) | lo;
+}
 
-// start counter
-void start_counter() { start = __rdtsc(); };
+uint64_t inline read_OS_timer_ns(void) {
+    struct timespec now;
+    clockid_t clock_id = CLOCK_MONOTONIC;
+    clock_gettime(clock_id, &now);
+    uint64_t now_ns = (now.tv_sec * 1000000000) + now.tv_nsec;
+    return now_ns;
+}
 
 // get num of cycles since counter started
-double get_counter() {
-    uint64_t end = __rdtsc();
+double get_duration(uint64_t start, uint64_t end) {
     double res = (double)(end - start);
     if (res < 0) {
         fprintf(stderr, "Error: Cycle counter returning negative value: %.0f\n",
@@ -25,27 +33,25 @@ double get_counter() {
     return res;
 };
 
-// measure overhead of counter
-double get_counter_overhead() {
-    // Do it twice to eliminate cache effects
-    int i;
+// measure overhead of tsc counter
+double get_tsc_counter_overhead(void) {
+    // Do it n-times to eliminate cache effects
     double result;
-    for (i = 0; i < 2; i++) {
-        start_counter();
-        result = get_counter();
+    int repeat = 5;
+    for (int i = 0; i < repeat; i++) {
+        uint64_t start = read_CPU_tsc();
+        uint64_t end   = read_CPU_tsc();
+        result         = get_duration(start, end);
     }
     return result;
 };
 
-// keep track of clock speed
-double cpu_ghz = 0.0;
-
 #define MAXBUF 512
 
-static double core_mhz(int verbose) {
+double get_nomimal_CPU_frequency_GHz(void) {
     static char buf[MAXBUF];
-    FILE *fp = fopen("/proc/cpuinfo", "r");
-    cpu_ghz = 0.0;
+    FILE* fp       = fopen("/proc/cpuinfo", "r");
+    double cpu_ghz = 0.0;
 
     if (!fp) {
         fprintf(stderr, "Can't open /proc/cpuinfo to get clock information\n");
@@ -66,92 +72,25 @@ static double core_mhz(int verbose) {
         cpu_ghz = 2.6;
         return cpu_ghz * 1000.0;
     }
-    if (verbose) {
-        printf("Processor Clock Rate ~= %.4f GHz (extracted from file)\n",
-               cpu_ghz);
+    return cpu_ghz;
+}
+
+// calculate clock rate by measuring cycles after waiting for given milliseconds
+double calc_CPU_frequency_GHz(uint64_t wait_time_milliseconds) {
+    uint64_t os_start_ns = 0, os_end_ns = 0, os_elapsed_ns = 0;
+    uint64_t os_wait_time_ns = wait_time_milliseconds * 1000000;
+
+    uint64_t cpu_start = read_CPU_tsc();     // read CPU start
+    os_start_ns        = read_OS_timer_ns(); // read start OS time
+
+    // wait until wait_time duration is over
+    while (os_elapsed_ns < os_wait_time_ns) {
+        os_end_ns     = read_OS_timer_ns();
+        os_elapsed_ns = os_end_ns - os_start_ns;
     }
-    return cpu_ghz * 1000;
-}
 
-// clock rate of processor
-double mhz(int verbose) {
-    double val = core_mhz(verbose);
-    return val;
-}
+    uint64_t cpu_end    = __rdtsc();
+    uint64_t cpu_cycles = cpu_end - cpu_start;
 
-// determine clock rate by measuring cycles elapsed while sleeping for
-// sleeptime seconds
-double mhz_full(int verbose, int sleeptime) {
-    double rate;
-    start_counter();
-    sleep(sleeptime);
-    rate = get_counter() / (1e6 * sleeptime);
-    if (verbose)
-        printf("Processor Clock Rate ~= %.1f MHz\n", rate);
-    return rate;
-}
-
-// special counters that compensate for timer interrupt overhead
-
-static double cyc_per_tick = 0.0;
-
-#define NEVENT 100
-#define THRESHOLD 1000
-#define RECORDTHRESH 3000
-
-// attempt to see how much time is used by timer interrupt
-static void callibrate(int verbose) {
-    double oldt;
-    struct tms t;
-    clock_t oldc;
-    int e = 0;
-    times(&t);
-    oldc = t.tms_utime;
-    start_counter();
-    oldt = get_counter();
-    while (e < NEVENT) {
-        double newt = get_counter();
-        if (newt - oldt >= THRESHOLD) {
-            clock_t newc;
-            times(&t);
-            newc = t.tms_utime;
-            if (newc > oldc) {
-                double cpt = (newt - oldt) / (newc - oldc);
-                if ((cyc_per_tick == 0.0 || cyc_per_tick > cpt) &&
-                    cpt > RECORDTHRESH)
-                    cyc_per_tick = cpt;
-                e++;
-                oldc = newc;
-            }
-            oldt = newt;
-        }
-    }
-    if (verbose)
-        printf("Setting cyc_per_tick to %f\n", cyc_per_tick);
-}
-
-static clock_t start_tick = 0;
-
-void start_comp_counter() {
-    struct tms t;
-    if (cyc_per_tick == 0.0)
-        callibrate(1);
-    times(&t);
-    start_tick = t.tms_utime;
-    start_counter();
-}
-
-double get_comp_counter() {
-    double time = get_counter();
-    double ctime;
-    struct tms t;
-    clock_t ticks;
-    times(&t);
-    ticks = t.tms_utime - start_tick;
-    ctime = time - ticks * cyc_per_tick;
-    /*
-    printf("Measured %.0f cycles.  Ticks = %d.  Corrected %.0f cycles\n",
-           time, (int) ticks, ctime);
-    */
-    return ctime;
+    return (double)cpu_cycles / (double)os_elapsed_ns;
 }
