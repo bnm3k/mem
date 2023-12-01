@@ -18,8 +18,5 @@ bench: $(BIN)
 	rm -f results/results.csv
 	./$^ > results/results.csv
 
-add_results:
-	python3 results/add_results.py
-
 clean:
 	rm -rf a.out
