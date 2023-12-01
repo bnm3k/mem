@@ -47,7 +47,7 @@ void free_bench(bench_t* b) {
 }
 
 // add new sample
-static void bench_add_sample(bench_t* b, double val) {
+void bench_add_sample(bench_t* b, double val) {
     int pos = 0;
     if (b->sample_count < b->k) {
         // so for, only have samplecount < k (default k = 3)

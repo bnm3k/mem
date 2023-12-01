@@ -15,101 +15,155 @@ static double B[MAX_N][MAX_N];
 static double C[MAX_N][MAX_N];
 
 // inner-loop: column-wise access of A & C
-void multiply_jki(const size_t N,
-                  double A[N][N],
-                  double B[N][N],
-                  double C[N][N]) {
+double multiply_jki(bench_t* b,
+                    const size_t N,
+                    double A[N][N],
+                    double B[N][N],
+                    double C[N][N]) {
     int i, j, k;
+    bench_reset(b);
     for (j = 0; j < N; j++) {
         for (k = 0; k < N; k++) {
-            double r = B[k][j];
+            uint64_t start = read_CPU_tsc();
+            double r       = B[k][j];
             for (i = 0; i < N; i++) {
                 C[i][j] += A[i][k] * r;
             }
+            uint64_t end  = read_CPU_tsc();
+            double cycles = get_duration(start, end);
+            bench_add_sample(b, cycles);
+            if (bench_has_converged(b) > 0) goto done;
         }
     }
+done:
+    return bench_get_min(b);
 }
 
 // inner-loop: column-wise access of A & C
-void multiply_kji(const size_t N,
-                  double A[N][N],
-                  double B[N][N],
-                  double C[N][N]) {
+double multiply_kji(bench_t* b,
+                    const size_t N,
+                    double A[N][N],
+                    double B[N][N],
+                    double C[N][N]) {
+    bench_reset(b);
     int i, j, k;
     for (k = 0; k < N; k++) {
         for (j = 0; j < N; j++) {
-            double r = B[k][j];
+            uint64_t start = read_CPU_tsc();
+            double r       = B[k][j];
             for (i = 0; i < N; i++) {
                 C[i][j] += A[i][k] * r;
             }
+            uint64_t end  = read_CPU_tsc();
+            double cycles = get_duration(start, end);
+            bench_add_sample(b, cycles);
+            if (bench_has_converged(b) > 0) goto done;
         }
     }
+done:
+    return bench_get_min(b);
 }
 
 // inner-loop: row-wise access of A, column-wise access of B
-void multiply_jik(const size_t N,
-                  double A[N][N],
-                  double B[N][N],
-                  double C[N][N]) {
+double multiply_jik(bench_t* b,
+                    const size_t N,
+                    double A[N][N],
+                    double B[N][N],
+                    double C[N][N]) {
+    bench_reset(b);
     int i, j, k;
     for (j = 0; j < N; j++) {
         for (i = 0; i < N; i++) {
-            double sum = 0.0;
+            uint64_t start = read_CPU_tsc();
+            double sum     = 0.0;
             for (k = 0; k < N; k++) {
                 sum += A[i][k] * B[k][j];
             }
-            C[i][j] = sum;
+            C[i][j]       = sum;
+            uint64_t end  = read_CPU_tsc();
+            double cycles = get_duration(start, end);
+            bench_add_sample(b, cycles);
+            if (bench_has_converged(b) > 0) goto done;
         }
     }
+done:
+    return bench_get_min(b);
 }
 
 // inner-loop: row-wise access of A, column-wise access of B
-void multiply_ijk(const size_t N,
-                  double A[N][N],
-                  double B[N][N],
-                  double C[N][N]) {
+double multiply_ijk(bench_t* b,
+                    const size_t N,
+                    double A[N][N],
+                    double B[N][N],
+                    double C[N][N]) {
+    bench_reset(b);
     int i, j, k;
     for (i = 0; i < N; i++) {
         for (j = 0; j < N; j++) {
-            double sum = 0.0;
+            uint64_t start = read_CPU_tsc();
+            double sum     = 0.0;
             for (k = 0; k < N; k++) {
                 sum += A[i][k] * B[k][j];
             }
-            C[i][j] = sum;
+            C[i][j]       = sum;
+            uint64_t end  = read_CPU_tsc();
+            double cycles = get_duration(start, end);
+            bench_add_sample(b, cycles);
+            if (bench_has_converged(b) > 0) goto done;
         }
     }
+done:
+    return bench_get_min(b);
 }
 
 // inner-loop: row-wise access of B & C
-void multiply_kij(const size_t N,
-                  double A[N][N],
-                  double B[N][N],
-                  double C[N][N]) {
+double multiply_kij(bench_t* b,
+                    const size_t N,
+                    double A[N][N],
+                    double B[N][N],
+                    double C[N][N]) {
+    bench_reset(b);
     int i, j, k;
     for (k = 0; k < N; k++) {
         for (i = 0; i < N; i++) {
-            double r = A[i][k];
+            uint64_t start = read_CPU_tsc();
+            double r       = A[i][k];
             for (j = 0; j < N; j++) {
                 C[i][j] += r * B[k][j];
             }
+            uint64_t end  = read_CPU_tsc();
+            double cycles = get_duration(start, end);
+            bench_add_sample(b, cycles);
+            if (bench_has_converged(b) > 0) goto done;
         }
     }
+done:
+    return bench_get_min(b);
 }
 
 // inner-loop: row-wise access of B & C
-void multiply_ikj(const size_t N,
-                  double A[N][N],
-                  double B[N][N],
-                  double C[N][N]) {
+double multiply_ikj(bench_t* b,
+                    const size_t N,
+                    double A[N][N],
+                    double B[N][N],
+                    double C[N][N]) {
+    bench_reset(b);
     int i, j, k;
     for (i = 0; i < N; i++) {
         for (k = 0; k < N; k++) {
-            double r = A[i][k];
+            uint64_t start = read_CPU_tsc();
+            double r       = A[i][k];
             for (j = 0; j < N; j++) {
                 C[i][j] += r * B[k][j];
             }
+            uint64_t end  = read_CPU_tsc();
+            double cycles = get_duration(start, end);
+            bench_add_sample(b, cycles);
+            if (bench_has_converged(b) > 0) goto done;
         }
     }
+done:
+    return bench_get_min(b);
 }
 
 void fill_with_val(double val, const size_t N, double M[N][N]) {
@@ -153,7 +207,11 @@ void fill_rand(const size_t N, double M[N][N]) {
 
 typedef struct {
     char* name;
-    void (*fn)(const size_t N, double A[N][N], double B[N][N], double C[N][N]);
+    double (*fn)(bench_t* b,
+                 const size_t N,
+                 double A[N][N],
+                 double B[N][N],
+                 double C[N][N]);
 } matrix_multiply_t;
 
 int main(void) {
@@ -203,9 +261,8 @@ int main(void) {
     for (size_t N = MIN_N; N <= MAX_N; N += INC_N) {
         for (size_t cs = 0; cs < num_cases; cs++) {
             fill_with_val(0.0, MAX_N, C);
-            double ov = get_tsc_counter_overhead();
-            double cycles =
-                bench_run(b, matrix_multiply[cs].fn, N, A, B, C) - ov;
+            double ov       = get_tsc_counter_overhead();
+            double cycles   = matrix_multiply[cs].fn(b, N, A, B, C) - ov;
             int convergence = bench_has_converged(b);
             // output row
             printf("%lu, %s, %f, %f, %d, %d, %d, %f\n", N,

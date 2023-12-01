@@ -11,6 +11,9 @@ def init_db(conn):
         """
     create sequence seq_bench_id start 1;
 
+    create type BENCH_TYPE
+        as ENUM('inner', 'total');
+
     create table benchmark(
         id INTEGER PRIMARY KEY DEFAULT nextval('seq_bench_id'),
         description VARCHAR,
@@ -20,7 +23,8 @@ def init_db(conn):
         num_samples INTEGER NOT NULL,
         convergence INTEGER NOT NULL,
         k INTEGER NOT NULL,
-        epsilon DOUBLE NOT NULL
+        epsilon DOUBLE NOT NULL,
+        bench_type BENCH_TYPE NOT NULL
     );
 
     create type FN_TYPE
@@ -38,6 +42,7 @@ def init_db(conn):
 
 def main():
     print("Adding results")
+    bench_type = "inner"
     results_dir = os.path.dirname(os.path.realpath(__file__))
     results_csv = os.path.join(results_dir, "results.csv")
     results_db = os.path.join(results_dir, "results.db")
@@ -88,12 +93,14 @@ def main():
             benchmark.extend(bench_metadata)
         else:
             raise Exception("bench_metadata is None")
+        benchmark.append(bench_type)
+
         bench_id = (
             conn.execute(
                 """insert into benchmark
                  (description, hash, ts_added, frequency_GHz,
-                 num_samples, convergence, k, epsilon)
-                 values (?,?,?,?,?,?,?,?) returning id;
+                 num_samples, convergence, k, epsilon, bench_type)
+                 values (?,?,?,?,?,?,?,?,?) returning id;
                  """,
                 benchmark,
             ).fetchone()
