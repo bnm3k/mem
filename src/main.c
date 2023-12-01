@@ -7,7 +7,7 @@
 #include "clock.h"
 
 #define MIN_N 50
-#define MAX_N 1200
+#define MAX_N 1000
 #define INC_N 50
 
 static double A[MAX_N][MAX_N];

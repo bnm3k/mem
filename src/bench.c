@@ -26,7 +26,7 @@ bench_t* new_bench(int k, double epsilon, int max_samples, bool clear_cache) {
 }
 
 bench_t* new_bench_default(void) {
-    return new_bench(3, 0.01, 500, false);
+    return new_bench(3, 0.01, 100, false);
 }
 
 void bench_reset(bench_t* b) {
