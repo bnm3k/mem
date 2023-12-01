@@ -35,13 +35,13 @@ def init_db(conn):
 
 
 def main():
-    print("adding results")
+    print("Adding results")
     results_dir = os.path.dirname(os.path.realpath(__file__))
     results_csv = os.path.join(results_dir, "results.csv")
     results_db = os.path.join(results_dir, "results.db")
 
     description = None
-    skip_add_description = True
+    skip_add_description = False
     if skip_add_description == False:
         got = input("Enter benchmark description: ").strip()
         if got != "":
@@ -52,13 +52,12 @@ def main():
     print("results_db:", results_db)
     print(f"description: '{description}'")
 
-    results_db = ":memory:"
+    # results_db = ":memory:"
     conn = duckdb.connect(results_db)
     init_db(conn)
     conn.sql(
         f"create temporary table raw_results as select * from '{results_csv}'"
     )
-    conn.sql("select * from raw_results").show()
 
     # get hash
     md5_hash = None

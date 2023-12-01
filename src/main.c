@@ -5,11 +5,9 @@
 
 #include "bench.h"
 
-#define MIN_N 2
-#define MAX_N 4
-#define INC_BY 1
-
-#define min(x, y) (x < y ? x : y)
+#define MIN_N 50
+#define MAX_N 700
+#define INC_N 50
 
 static double A[MAX_N][MAX_N];
 static double B[MAX_N][MAX_N];
@@ -202,7 +200,7 @@ int main(void) {
 
     // get first comp
     double n_cycles[num_cases];
-    for (size_t N = 3; N < 6; N++) {
+    for (size_t N = MIN_N; N <= MAX_N; N += INC_N) {
         for (size_t cs = 0; cs < num_cases; cs++) {
             fill_with_val(0.0, MAX_N, C);
             double cycles = bench(matrix_multiply[cs].fn, N, A, B, C, false);
