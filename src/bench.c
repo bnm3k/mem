@@ -1,8 +1,14 @@
-#include "clock.h"
-#include "fcyc.h"
+#include <sched.h>
 #include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
-//
+#include <time.h>
+#include <x86intrin.h>
+
+#include "bench.h"
+#include "clock.h"
+
 static double* k_min_samples = NULL;
 int samplecount              = 0;
 
@@ -94,19 +100,26 @@ static void do_clear_cache() {
 }
 
 // compute time used by function f
-double fcyc2(test_funct f, int param1, int param2, bool clear_cache) {
-    return fyc2_full(f, param1, param2, clear_cache, 3, 0.01, 500, 0);
+double bench(mm_fn f,
+             const size_t N,
+             double A[N][N],
+             double B[N][N],
+             double C[N][N],
+             bool clear_cache) {
+    return bench_full(f, N, A, B, C, clear_cache, 3, 0.01, 500, 0);
 }
 
 // routines used to help with analysis
-double fyc2_full(test_funct f,
-                 int param1,
-                 int param2,
-                 bool clear_cache,
-                 int k,
-                 double epsilon,
-                 int maxsamples,
-                 bool compensate) {
+double bench_full(mm_fn f,
+                  const size_t N,
+                  double A[N][N],
+                  double B[N][N],
+                  double C[N][N],
+                  bool clear_cache,
+                  int k,
+                  double epsilon,
+                  int maxsamples,
+                  bool compensate) {
     void (*do_start_counter)() = start_counter;
     double (*do_get_counter)() = get_counter;
     if (compensate) {
@@ -116,10 +129,10 @@ double fyc2_full(test_funct f,
     init_sampler(k, maxsamples);
     do {
         if (clear_cache) do_clear_cache();
-        f(param1, param2); // warm cache
+        f(N, A, B, C); // warm cache
 
         do_start_counter();
-        f(param1, param2);
+        f(N, A, B, C);
         double cyc = do_get_counter();
         add_sample(cyc, k);
     } while (!has_converged(k, epsilon, maxsamples) &&
@@ -130,4 +143,38 @@ double fyc2_full(test_funct f,
     values = NULL;
 #endif
     return result;
+}
+
+void assign_to_core(int core_id) {
+    cpu_set_t mask;
+    CPU_ZERO(&mask);
+    CPU_SET(core_id, &mask);
+    sched_setaffinity(1, sizeof(mask), &mask);
+}
+
+static inline uint64_t read_OS_timer_ns(void) {
+    struct timespec now;
+    clockid_t clock_id = CLOCK_MONOTONIC;
+    clock_gettime(clock_id, &now);
+    uint64_t now_ns = (now.tv_sec * 1000000000) + now.tv_nsec;
+    return now_ns;
+}
+
+double get_cpu_frequency_GHz(uint64_t wait_time_milliseconds) {
+    uint64_t os_start_ns = 0, os_end_ns = 0, os_elapsed_ns = 0;
+    uint64_t os_wait_time_ns = wait_time_milliseconds * 1000000;
+
+    uint64_t cpu_start = __rdtsc();          // read CPU start
+    os_start_ns        = read_OS_timer_ns(); // read start OS time
+
+    // wait until wait_time duration is over
+    while (os_elapsed_ns < os_wait_time_ns) {
+        os_end_ns     = read_OS_timer_ns();
+        os_elapsed_ns = os_end_ns - os_start_ns;
+    }
+
+    uint64_t cpu_end    = __rdtsc();
+    uint64_t cpu_cycles = cpu_end - cpu_start;
+
+    return (double)cpu_cycles / (double)os_elapsed_ns;
 }
