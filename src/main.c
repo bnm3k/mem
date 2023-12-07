@@ -7,7 +7,8 @@
 #include "clock.h"
 
 #define MIN_N 50
-#define MAX_N 1000
+/* #define MAX_N 1000 */
+#define MAX_N 500
 #define INC_N 50
 
 static double A[MAX_N][MAX_N];
@@ -193,11 +194,14 @@ int main(void) {
     size_t num_cases = sizeof(matrix_multiply) / sizeof(matrix_multiply[0]);
 
     // output header
-    printf(
-        "N, fn, cycles, frequency_GHz, num_samples, convergence, k, epsilon\n");
+    printf("N, fn, cycles, frequency_GHz, num_samples, convergence, k, "
+           "epsilon, bench_type, unit\n");
     double frequency = calc_CPU_frequency_GHz(100);
+    char* bench_type = "total";
+    char* unit       = "cycles";
 
-    bench_t* b = new_bench_default();
+    bench_t* b     = new_bench_default();
+    b->max_samples = 3;
     // clear cache after every run
     b->clear_cache = true;
     for (size_t N = MIN_N; N <= MAX_N; N += INC_N) {
@@ -208,9 +212,9 @@ int main(void) {
                 bench_run(b, matrix_multiply[cs].fn, N, A, B, C) - ov;
             int convergence = bench_has_converged(b);
             // output row
-            printf("%lu, %s, %f, %f, %d, %d, %d, %f\n", N,
+            printf("%lu, %s, %f, %f, %d, %d, %d, %f, %s, %s\n", N,
                    matrix_multiply[cs].name, cycles, frequency, b->max_samples,
-                   convergence, b->k, b->epsilon);
+                   convergence, b->k, b->epsilon, bench_type, unit);
             fflush(stdout);
         }
         bench_reset(b);

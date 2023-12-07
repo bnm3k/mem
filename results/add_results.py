@@ -14,6 +14,9 @@ def init_db(conn):
     create type BENCH_TYPE
         as ENUM('inner', 'total');
 
+    create type UNIT_TYPE
+        as ENUM('cycles', 'ns');
+
     create table benchmark(
         id INTEGER PRIMARY KEY DEFAULT nextval('seq_bench_id'),
         description VARCHAR,
@@ -24,17 +27,18 @@ def init_db(conn):
         convergence INTEGER NOT NULL,
         k INTEGER NOT NULL,
         epsilon DOUBLE NOT NULL,
-        bench_type BENCH_TYPE NOT NULL
+        bench_type BENCH_TYPE NOT NULL,
+        unit UNIT_TYPE NOT NULL
     );
 
     create type FN_TYPE
         as ENUM('jki', 'kji', 'jik', 'ijk','kij', 'ikj');
 
-    create table results_cycles(
+    create table result(
         bench_id INTEGER NOT NULL REFERENCES benchmark(id),
         N INTEGER NOT NULL,
         fn FN_TYPE NOT NULL,
-        cycles DOUBLE NOT NULL
+        value DOUBLE NOT NULL
     );
     """
     )
@@ -42,10 +46,10 @@ def init_db(conn):
 
 def main():
     print("Adding results")
-    bench_type = "inner"
     results_dir = os.path.dirname(os.path.realpath(__file__))
     results_csv = os.path.join(results_dir, "results.csv")
     results_db = os.path.join(results_dir, "results.db")
+    # results_db = ":memory:"
 
     description = None
     skip_add_description = False
@@ -59,7 +63,6 @@ def main():
     print("results_db:", results_db)
     print(f"description: '{description}'")
 
-    # results_db = ":memory:"
     conn = duckdb.connect(results_db)
     try:
         init_db(conn)
@@ -84,7 +87,8 @@ def main():
     try:
         bench_metadata = conn.sql(
             """
-            select frequency_GHz, num_samples, convergence, k, epsilon
+            select frequency_GHz, num_samples, convergence,
+                k, epsilon, trim(bench_type), trim(unit)
             from raw_results limit 1
             """
         ).fetchone()
@@ -93,14 +97,13 @@ def main():
             benchmark.extend(bench_metadata)
         else:
             raise Exception("bench_metadata is None")
-        benchmark.append(bench_type)
 
         bench_id = (
             conn.execute(
                 """insert into benchmark
                  (description, hash, ts_added, frequency_GHz,
-                 num_samples, convergence, k, epsilon, bench_type)
-                 values (?,?,?,?,?,?,?,?,?) returning id;
+                 num_samples, convergence, k, epsilon, bench_type, unit)
+                 values (?,?,?,?,?,?,?,?,?,?) returning id;
                  """,
                 benchmark,
             ).fetchone()
@@ -114,15 +117,15 @@ def main():
 
     conn.execute(
         f"""
-        insert into results_cycles by name
-        select bench_id, N, trim(fn) as fn, cycles
+        insert into result by name
+        select bench_id, N, trim(fn) as fn, cycles as value
         from raw_results,
         (select ? as bench_id)
         """,
         [bench_id],
     )
 
-    conn.sql("select * from results_cycles").show()
+    conn.sql("select * from result").show()
 
 
 if __name__ == "__main__":
