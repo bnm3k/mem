@@ -10,7 +10,11 @@
 #include "clock.h"
 
 // create new sampling process
-bench_t* new_bench(int k, double epsilon, int max_samples, bool clear_cache) {
+bench_t* new_bench(int k,
+                   double epsilon,
+                   int max_samples,
+                   bool clear_cache,
+                   enum clock_type clock) {
     bench_t* b       = calloc(sizeof(bench_t), 1);
     b->k_min_samples = calloc(k, sizeof(double));
 #if KEEP_SAMPLES
@@ -21,12 +25,13 @@ bench_t* new_bench(int k, double epsilon, int max_samples, bool clear_cache) {
     b->sample_count = 0;
     b->max_samples  = max_samples;
     b->clear_cache  = clear_cache;
+    b->clock        = clock;
 
     return b;
 }
 
 bench_t* new_bench_default(void) {
-    return new_bench(3, 0.01, 100, false);
+    return new_bench(3, 0.01, 100, false, CLOCK_OS_TIMER_NS);
 }
 
 void bench_reset(bench_t* b) {
@@ -123,13 +128,21 @@ double bench_run(bench_t* b,
                  double A[N][N],
                  double B[N][N],
                  double C[N][N]) {
+    uint64_t (*read_time)(void) = NULL;
+    if (b->clock == CLOCK_CPU_TSC)
+        read_time = read_CPU_tsc;
+    else if (b->clock == CLOCK_OS_TIMER_NS)
+        read_time = read_OS_timer_ns;
+    uint64_t start, end;
+    start = read_time(); // warm up?
+
     do {
         if (b->clear_cache) do_clear_cache();
         f(N, A, B, C); // warm cache
 
-        uint64_t start = read_CPU_tsc();
+        start = read_time();
         f(N, A, B, C);
-        uint64_t end  = read_CPU_tsc();
+        end           = read_time();
         double cycles = get_duration(start, end);
         bench_add_sample(b, cycles);
     } while (bench_has_converged(b) == 0 && b->sample_count < b->max_samples);

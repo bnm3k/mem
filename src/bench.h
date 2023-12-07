@@ -13,6 +13,8 @@ typedef void (*mm_fn)(const size_t N,
 
 #define KEEP_SAMPLES 1
 
+enum clock_type { CLOCK_CPU_TSC, CLOCK_OS_TIMER_NS };
+
 typedef struct {
     double* k_min_samples;
 #if KEEP_SAMPLES
@@ -23,9 +25,14 @@ typedef struct {
     int sample_count;
     int max_samples;
     bool clear_cache;
+    enum clock_type clock;
 } bench_t;
 
-bench_t* new_bench(int k, double epsilon, int max_samples, bool clear_cache);
+bench_t* new_bench(int k,
+                   double epsilon,
+                   int max_samples,
+                   bool clear_cache,
+                   enum clock_type clock);
 
 // k=3, epsilon=0.01, max_samples=500, clear_cache=false
 bench_t* new_bench_default(void);

@@ -46,8 +46,12 @@ def init_db(conn):
 
 def main():
     print("Adding results")
+    try:
+        results_csv_filename = sys.argv[1]
+    except Exception:
+        results_csv_filename = "results.csv"
     results_dir = os.path.dirname(os.path.realpath(__file__))
-    results_csv = os.path.join(results_dir, "results.csv")
+    results_csv = os.path.join(results_dir, results_csv_filename)
     results_db = os.path.join(results_dir, "results.db")
     # results_db = ":memory:"
 

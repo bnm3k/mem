@@ -196,14 +196,19 @@ int main(void) {
     // output header
     printf("N, fn, cycles, frequency_GHz, num_samples, convergence, k, "
            "epsilon, bench_type, unit\n");
-    double frequency = calc_CPU_frequency_GHz(100);
-    char* bench_type = "total";
-    char* unit       = "cycles";
+    double frequency      = calc_CPU_frequency_GHz(100);
+    char* bench_type      = "total";
+    enum clock_type clock = CLOCK_OS_TIMER_NS;
+    char* unit            = NULL;
+    if (clock == CLOCK_CPU_TSC)
+        unit = "cycles";
+    else if (clock == CLOCK_OS_TIMER_NS)
+        unit = "ns";
 
     bench_t* b     = new_bench_default();
-    b->max_samples = 3;
+    b->max_samples = 100;
     // clear cache after every run
-    b->clear_cache = true;
+    b->clock = clock;
     for (size_t N = MIN_N; N <= MAX_N; N += INC_N) {
         for (size_t cs = 0; cs < num_cases; cs++) {
             fill_with_val(0.0, MAX_N, C);
