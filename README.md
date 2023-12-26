@@ -31,14 +31,14 @@ We'll be focusing on NxN (square) matrices where N is assumed to be very large.
 Matrix multiplication involves taking two matrices A and B and combining them
 into a new matrix C.
 
-![matrix multiplication diagram](assets/mm/matrix_multiplcation_diagram.png)
+![matrix multiplication diagram](assets/mm/matrix_multiplication_diagram.png)
 _credits wikipedia_
 
 For each element in C, we take the dot product of the associated row in A with
 the associated column in B. The mathematical definition from wikipedia is
 definitely clearer and more precise:
 
-![matrix multiplication formula](assets/mm/matrix_multiplcation_formula.svg)
+![matrix multiplication formula](assets/mm/matrix_multiplication_formula.svg)
 _credits wikipedia_
 
 This definition also lends itself to the following straightforward algorithm
