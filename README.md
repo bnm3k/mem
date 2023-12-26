@@ -4,8 +4,6 @@ Alternative Title: Optimizing CPU & Memory Interaction
 
 ## TODO
 
-- finish describing each version of matrix multiplication
-- add diagrams?
 - array of structs vs struct of arrays
 - benchmarking?
 - Remove TODOs
@@ -229,7 +227,7 @@ int get_sum(int a[M][N]){
 }
 ```
 
-TODO: add diagram for column major traversal
+![row-major traversal vs column-major traversal](assets/mm/traversals.svg)
 
 The program traverses the 2-D array by going down the first column, then the
 second and so on. It is still the same from a correctness perspective (addition
