@@ -427,3 +427,7 @@ for (k = 0; k < N; k++) {
 ```
 
 ## Benchmark Results
+
+![Line chart comparing total cycles for each matrix multiplication routine](assets/mm/total_res.png)
+
+![Line chart comparing cycles per inner-loop iteration for each matrix multiplication routine](assets/mm/per_iter_res.png)
