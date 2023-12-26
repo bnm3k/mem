@@ -1,0 +1,129 @@
+TODO
+
+- The Memory Mountain L2 Bump
+    http://csappbook.blogspot.com/2017/05/the-memory-mountain-l2-bump.html
+
+- Memory Mountain code 1
+    https://github.com/guillaumesalagnac/memory-mountain
+
+- Memory Management Optimization Techniques
+    https://samueleresca.net/memory-management-optimizations-techniques/
+
+- Analysis of What every prorammer should know memory
+    https://samueleresca.net/analysis-of-what-every-programmer-should-know-about-memory/
+
+- Memory Mountain code 2
+    https://github.com/prakashkurup/Memory-Mountain
+
+- Estmimating CPU Cache size with the memory mountain
+    https://onestepcode.com/memory-mountain-cpu-cache/
+
+- CSAPP Chapter 6 summary
+    https://cw00h.github.io/csapp/CSAPP-6/
+
+- How to find Cache sizes in Linux
+    https://www.baeldung.com/linux/check-cache-size-l1-l2-l3
+
+- How to Write Fast Numerical Code
+    https://people.inf.ethz.ch/markusp/teaching/263-2300-ETH-spring12/homeworks/hw03_Solution.pdf
+
+- Cachegrind
+    https://valgrind.org/docs/manual/cg-manual.html
+
+- Characterizing Memory Bandwidth Paper
+    https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=569658&tag=1
+
+- Getting clock speed for processor
+    https://askubuntu.com/questions/218567/any-way-to-check-the-clock-speed-of-my-processor
+
+- Why loops matter - Matrix Multiplication
+    https://medium.com/@Styp/why-loops-do-matter-a-story-of-matrix-multiplication-cache-access-patterns-and-java-859111845c25
+
+- Memory Hierarchies & Matrix Multiplication - Lecture Notes
+    https://people.eecs.berkeley.edu/~demmel/cs267_Spr99/Lectures/Lect_02_1999b.pdf
+
+- Memory Access Pattern & Performance - matrix multiplication
+    https://johnnysswlab.com/memory-access-pattern-and-performance-the-example-of-matrix-multiplication/
+
+- Optimizing Cache Performance in Matrix Multiplication
+    https://sites.cs.ucsb.edu/~tyang/class/240a17/slides/Cache3.pdf
+
+- Matrix Multiplication - Case Study of Enhanced data Cache Utilization
+    https://citeseerx.ist.psu.edu/viewdoc/download;jsessionid=23EC4BDD6E170534976087E768D35178?doi=10.1.1.101.3511&rep=rep1&type=pdf
+
+- Cache friendly method to multiply two matrices
+    https://stackoverflow.com/questions/13312625/cache-friendly-method-to-multiply-two-matrices
+
+- Speeding Up Translation of Virtual to Physical Memory Addresses
+    https://johnnysswlab.com/speeding-up-translation-of-virtual-to-physical-memory-addresses-tlb-and-huge-pages/
+
+- Performance Through Memory Layout
+    https://johnnysswlab.com/performance-through-memory-layout/
+
+- Measuring memory Subsystem Performance
+    https://johnnysswlab.com/measuring-memory-subsystem-performance/
+
+- Hiding memory Latency with In-Order CPU Cores
+    https://johnnysswlab.com/hiding-memory-latency-with-in-order-cpu-cores-or-how-compilers-optimize-your-code/
+
+- Software Performance and Class Layout
+    https://johnnysswlab.com/software-performance-and-class-layout/
+
+- Decreasing the Number of Memory Accesses
+    https://johnnysswlab.com/decreasing-the-number-of-memory-accesses-1-2/
+    https://johnnysswlab.com/decreasing-the-number-of-memory-accesses-the-compilers-secret-life-2-2/
+
+- Frugral Programming: Saving memory subsystem bandwidth
+    https://johnnysswlab.com/frugal-programming-saving-memory-subsystem-bandwidth/
+
+- Software Performance: Data Access
+    https://johnnysswlab.com/for-software-performance-the-way-data-is-accessed-matters/
+
+- Memory Consumption, dataset size & Performance
+    https://johnnysswlab.com/memory-consumption-dataset-size-and-performance-how-does-it-all-relate/
+
+- Instruction level parallelism in practice
+    https://johnnysswlab.com/instruction-level-parallelism-in-practice-speeding-up-memory-bound-programs-with-low-ilp/
+
+- Memory subsystem from the viewpoint of software
+    https://johnnysswlab.com/the-memory-subsystem-from-the-viewpoint-of-software-how-memory-subsystem-effects-software-performance-1-2/
+
+- Comparing Cache Architecture & Coherency
+    https://people.freebsd.org/~lstewart/articles/cache-performance-x86-2009.pdf
+
+- An analysis of Linux Scalability to Many Cores
+    https://people.freebsd.org/~lstewart/articles/linux_smp_scalability.pdf
+
+- Page in tool
+    https://akkadia.org/drepper/pagein.html
+
+- Display hardware topology in linux using lstopo:
+    https://tuxfixer.com/display-hardware-topology-in-linux/
+
+- dmidecode:
+    https://linux.die.net/man/8/dmidecode
+
+- Simple benchmark for memory throughput & latency:
+    https://github.com/ssvb/tinymembench
+
+- Enhanced REP MOVSB for memcpy
+    https://stackoverflow.com/questions/43343231/enhanced-rep-movsb-for-memcpy
+
+- Why data is fetched from main memory in write allocate cache policy
+    https://stackoverflow.com/questions/64942523/why-data-is-fetched-from-main-memory-in-write-allocate-cache-policy
+
+- What setup does REP do
+    https://stackoverflow.com/questions/33902068/what-setup-does-rep-do/33905887#33905887
+
+CACHE COHERENCY & MEMORY BARRIERS
+- Memory barriers: A hardware view for software hackers
+    https://www.puppetmastertrading.com/images/hwViewForSwHackers.pdf
+
+- Memory barriers are like source control operations
+    https://preshing.com/20120710/memory-barriers-are-like-source-control-operations/
+
+- Acquire and Release semantics:
+    https://preshing.com/20120913/acquire-and-release-semantics/
+
+- A primer on memory consistency and cache coherence
+    https://pages.cs.wisc.edu/~markhill/papers/primer2020_2nd_edition.pdf
