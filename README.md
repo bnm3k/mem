@@ -24,7 +24,7 @@ patterns significantly impact an algorithm's runtime. The `O(N^3)` algorithm
 remains unchanged but by optimizing the way memory accessed, we can improve the
 runtime by as much as 40x.
 
-## Straighforward algorithm
+## Straightforward algorithm
 
 We'll be focusing on NxN (square) matrices where N is assumed to be very large.
 
