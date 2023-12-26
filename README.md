@@ -1,51 +1,17 @@
-# Matrix Multiplication
-
-Alternative Title: Optimizing CPU & Memory Interaction
+# Optimizing CPU & Memory Interaction: Matrix Multiplication
 
 ## TODO
 
-- array of structs vs struct of arrays
-- benchmarking?
 - Remove TODOs
-
-## Table of contents
-
-1. Introduction
-2. Straighforward algorithm (ijk)
-   - add diagram for how each ijk var is used for direction
-3. Caches & Locality
-4. Caches, Reads & Writes
-5. Exploiting locality
-   - Multidimensional arrays + stride patterns
-6. Key takeaways
-7. jik version, same version
-   - demonstrate that performance is the same
-   - these fall in the same class AB (k is last - inner loop involves
-     incrementing k)
-8. Introduce BC class algorithms, row-wise access of B,C
-   - A val kept in register
-   - row-wise access of B and C (stride-1)
-   - benefits from prefetching
-   - In any systems writes are much easier to deal with than reads [lecture] -
-     you can defer writes.
-9. Introduce AC class
-   - column-wise access of A and C
-   - we should expect this to have the worst performance (stride-N)
-10. Benchmarking results
-    - compare overall runtime
-    - compare runtime of innermost loop
-    - use cachegrind
-    - use perf?
-11. Alternative approaches
-    - paying the cost of column-wise access once
-    - using blocking?
-12. Key take-aways.
-13. References and further reading
+- array of structs vs struct of arrays?
+- benchmarking results
+- cachegrind
+- perf?
 
 ## References
 
 1. [Computer Systems: A Programmer's Perspective, 3rd Edition - O'Hallaron D.,
-   Bryant R. - Chapter 6 - The Memory Hierarchy](TODO add link)
+   Bryant R. - Chapter 6 - The Memory Hierarchy](https://csapp.cs.cmu.edu/)
 2. [Matrix multiplication - wikipedia](https://en.wikipedia.org/wiki/Matrix_multiplication)
 3. [Caches(Writing) - Weatherspoon H. - Lecture slides](https://www.cs.cornell.edu/courses/cs3410/2013sp/lecture/18-caches3-w.pdf)
 4. [Lecture 12 - Cache Memories - Bryant R., Franchetti F., O'Hallaron D. - CMU 2015 Fall: 15-213 Introduction to Computer
@@ -62,15 +28,18 @@ runtime by as much as 40x.
 
 We'll be focusing on NxN (square) matrices where N is assumed to be very large.
 
-Matrix multiplication involves taking two matrices and combining them combining
-them into a new matrices. If we have matrix A and B and we want to multiply them
-to get C then for each element in C, we take the dot product of the associated
-row in A with the associated column in B. The mathematical definition from
-wikipedia is definitely clearer and more precise:
+Matrix multiplication involves taking two matrices A and B and combining them
+into a new matrix C.
 
-```
-TODO add diagram, formula from wikipedia
-```
+![matrix multiplication diagram](assets/mm/matrix_multiplcation_diagram.png)
+_credits wikipedia_
+
+For each element in C, we take the dot product of the associated row in A with
+the associated column in B. The mathematical definition from wikipedia is
+definitely clearer and more precise:
+
+![matrix multiplication formula](assets/mm/matrix_multiplcation_formula.svg)
+_credits wikipedia_
 
 This definition also lends itself to the following straightforward algorithm
 [1]:
@@ -108,8 +77,9 @@ A couple of points worth pointing out from the above code snippet:
   entry in C, we do N amount of work, there are N^2 entries, thus N^3.
 - Every entry per source element (A & B) is read N times
 
-Before going any further, let's introduce caching in computer systems, plus some
-key terms and definitions:
+The goal of this post is to detail how the straightforward approach can be
+optimized with regards to memory accesses. Before going any further, we'll need
+to introduce caching in computer systems, plus some key terms and definitions:
 
 ## Caches & Locality
 
@@ -227,11 +197,13 @@ int get_sum(int a[M][N]){
 }
 ```
 
+The program traverses the 2-D array by going down the first column, then the
+second and so on.
+
 ![row-major traversal vs column-major traversal](assets/mm/traversals.svg)
 
-The program traverses the 2-D array by going down the first column, then the
-second and so on. It is still the same from a correctness perspective (addition
-of ints is commutative) and it still does the same amount of work from a
+It is still the same from a correctness perspective (addition of ints is
+commutative) and it still does the same amount of work from a
 theoretic/complexity perspective (`O(MN)`). However, its "actual" performance is
 quite poor compared to the prior row-by-row version. Given how 2-D arrays are
 laid out, it fails to take advantage of spatial locality. In fact, if `N` is set
@@ -245,12 +217,6 @@ In both cases, we see what's referred to as a **stride pattern**. The row-by-row
 version exhibits a _stride-1_ pattern - the best-case for spatial locality. The
 column-by-column version exhibits a _stride-N_ pattern, the larger N is the more
 spatial locality decreases.
-
-## TODO: struct of arrays verses array of structs
-
-TODO
-
-Also andrew video
 
 ## Key Takeaways so Far
 
@@ -303,6 +269,8 @@ constant, the traversal of A is row-wise with a stride of 1 while the traversal
 of B is column-wise with a stride of n (n is assumed to be very large thus
 negating any instance of spatial locality).
 
+![AB traversals](assets/mm/AB.svg)
+
 Additionally, each iteration involves 2 loads (reads from A and B), and zero
 stores. Suppose a cache line holds 64 bytes and a double is 8 bytes. With the
 row-wise traversal of A, we'll get a cache miss when loading the 0th value in a
@@ -339,7 +307,7 @@ Can we do better? Yes, definitely:
 
 Let's start with the following diagram:
 
-TODO insert loop directions diagram here
+![Loop directions for i,j,k](assets/mm/loop_directions.svg)
 
 Observe that if we make the for-loop for j the innermost one, we'll get a
 row-wise traversal of matrix B and C which will be of stride-1, thus maximizing
@@ -393,7 +361,7 @@ for (i = 0; i < N; i++) {
 Both versions should have the same performance since they entail the same memory
 access patterns:
 
-TODO insert BC class diagram
+![BC traversals](assets/mm/BC.svg)
 
 Let's analyze the work getting done per each iteration (of the innermost
 for-loop):
@@ -426,7 +394,7 @@ we can get way worse performance.
 By making the innermost for-loop be the one that increments `i`, we get the AC
 routines: `jki` and `kji`. These traverse A and C column by column:
 
-TODO insert diagram here
+![AC traversals](assets/mm/AC.svg)
 
 Applying the same kind of analysis as for AB and BC routines, there will be 2
 loads and a store per iteration and 2 cache misses per iteration due to the
