@@ -1,14 +1,17 @@
 #include <assert.h>
+#include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #include "bench.h"
 #include "clock.h"
 
 #define MIN_N 50
-/* #define MAX_N 1000 */
-#define MAX_N 500
+#define MAX_N 1000
+/* #define MAX_N 500 */
 #define INC_N 50
 
 static double A[MAX_N][MAX_N];
@@ -157,36 +160,35 @@ typedef struct {
     void (*fn)(const size_t N, double A[N][N], double B[N][N], double C[N][N]);
 } matrix_multiply_t;
 
-int main(void) {
-    assign_to_core(4);
-    srand(42);
+static matrix_multiply_t matrix_multiply[] = {
+    {
+        .name = "jki",
+        .fn   = multiply_jki,
+    },
+    {
+        .name = "kji",
+        .fn   = multiply_kji,
+    },
+    {
+        .name = "jik",
+        .fn   = multiply_jik,
+    },
+    {
+        .name = "ijk",
+        .fn   = multiply_ijk,
+    },
+    {
+        .name = "kij",
+        .fn   = multiply_kij,
+    },
+    {
+        .name = "ikj",
+        .fn   = multiply_ikj,
+    },
+};
 
-    matrix_multiply_t matrix_multiply[] = {
-        {
-            .name = "jki",
-            .fn   = multiply_jki,
-        },
-        {
-            .name = "kji",
-            .fn   = multiply_kji,
-        },
-        {
-            .name = "jik",
-            .fn   = multiply_jik,
-        },
-        {
-            .name = "ijk",
-            .fn   = multiply_ijk,
-        },
-        {
-            .name = "kij",
-            .fn   = multiply_kij,
-        },
-        {
-            .name = "ikj",
-            .fn   = multiply_ikj,
-        },
-    };
+void run_bench(void) {
+    assign_to_core(4);
 
     fill_rand(MAX_N, A);
     fill_rand(MAX_N, B);
@@ -225,6 +227,42 @@ int main(void) {
         bench_reset(b);
     }
     free_bench(b);
+}
 
+int main(int argc, char** argv) {
+    srand(42);
+    int size              = -1;
+    matrix_multiply_t* mp = NULL;
+    while (true) {
+        int c = getopt(argc, argv, "n:f:");
+        if (c == -1) break;
+        switch (c) {
+        case 'n':
+            size = atoi(optarg);
+            break;
+        case 'f':
+            for (int i = 0; i < 6; i++) {
+                if (strcmp(optarg, matrix_multiply[i].name) == 0) {
+                    mp = &matrix_multiply[i];
+                    break;
+                }
+            }
+            if (mp == NULL) {
+                fprintf(stderr, "invalid func arg: %s\n", optarg);
+                return 1;
+            }
+            break;
+        default:
+            return 1;
+        }
+    }
+    if (mp == NULL || size < 0) {
+        fprintf(stderr, "arg error: usage: %s -f <func> -n <size>\n", argv[0]);
+        return 1;
+    }
+    fill_rand(MAX_N, A);
+    fill_rand(MAX_N, B);
+    fill_with_val(0.0, MAX_N, C);
+    mp->fn(size, A, B, C);
     return 0;
 }
