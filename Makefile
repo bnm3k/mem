@@ -1,5 +1,5 @@
 .SILENT:
-.DEFAULT_GOAL:=run
+.DEFAULT_GOAL:=build
 
 .PHONY: run build clean bench
 
@@ -10,9 +10,6 @@ $(BIN): src/main.c src/bench.c src/clock.c
 	gcc $(FLAGS) -o $@ $^ -lrt
 
 build: $(BIN)
-
-run: $(BIN)
-	./$^
 
 bench: $(BIN)
 	rm -f results/results.csv

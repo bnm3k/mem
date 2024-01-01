@@ -438,3 +438,9 @@ for (k = 0; k < N; k++) {
 ![Line chart comparing total cycles for each matrix multiplication routine](assets/mm/total_res.png)
 
 ![Line chart comparing cycles per inner-loop iteration for each matrix multiplication routine](assets/mm/per_iter_res.png)
+
+## Cache Analysis with Cachegrind
+
+A different way of comparing the matrix multiplication routines is via
+Cachegrind. This is a tool that takes a program, runs it against a simulated
+cache then provides cache usage and analysis.
