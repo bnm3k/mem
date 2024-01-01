@@ -4,7 +4,6 @@
 
 - Remove TODOs
 - array of structs vs struct of arrays?
-- benchmarking results
 - cachegrind
 - perf?
 
@@ -161,10 +160,10 @@ both temporal & spatial locality when writing our programs. Let's start with a
 simple example, summing up all the values in a two dimensional array:
 
 ```C
-int get_sum(int a[M][N]){
-  int res = 0;
-  for (int i = 0; i < M; i++){
-      for (int j = 0; j < N; j++){
+double get_sum(double a[M][N]){
+  double res = 0.0;
+  for (double i = 0; i < M; i++){
+      for (double j = 0; j < N; j++){
           res += a[i][j];
         }
     }
@@ -174,7 +173,7 @@ int get_sum(int a[M][N]){
 
 This seemingly simple snippet takes advantage of both temporal and spatial
 locality. The 2-D array consists of `M` rows each containing `N` columns (i.e. N
-ints). In C, such arrays are laid out in memory in a
+doubles). In C, such arrays are laid out in memory in a
 [row-major order](https://en.wikipedia.org/wiki/Row-_and_column-major_order).
 Therefore, when summing up the elements in the above snippet, the inner-loop
 iterates through the first row, then the second row and so forth [1]. The local
@@ -186,10 +185,10 @@ is a cache hit enabling the program to take advantage of spatial locality.
 Now, suppose we interchange the i and j loops as follows:
 
 ```C
-int get_sum(int a[M][N]){
-  int res = 0;
-  for (int j = 0; j < N; j++){
-    for (int i = 0; i < M; i++){
+double get_sum(double a[M][N]){
+  double res = 0.0;
+  for (double j = 0; j < N; j++){
+    for (double i = 0; i < M; i++){
           res += a[i][j];
         }
     }
@@ -202,7 +201,7 @@ second and so on.
 
 ![row-major traversal vs column-major traversal](assets/mm/traversals.svg)
 
-It is still the same from a correctness perspective (addition of ints is
+It is still the same from a correctness perspective (addition of doubles is
 commutative) and it still does the same amount of work from a
 theoretic/complexity perspective (`O(MN)`). However, its "actual" performance is
 quite poor compared to the prior row-by-row version. Given how 2-D arrays are
@@ -211,12 +210,20 @@ to the size of the cache, each inner-loop addition requires a fetch from a lower
 level and might even evict previous rows that we'll need to access again when
 summing up the next column. All these make the performance gap quite evident.
 
-TODO: carry out an actual benchmark
+When carrying out a benchmark to demonstrate the performance gap between
+summingrow-by-row vs column-by-column, I get the following results:
 
-In both cases, we see what's referred to as a **stride pattern**. The row-by-row
-version exhibits a _stride-1_ pattern - the best-case for spatial locality. The
-column-by-column version exhibits a _stride-N_ pattern, the larger N is the more
-spatial locality decreases.
+![sum by row vs by col](assets/mm/sum_by_row_vs_by_col.svg)
+
+Summing row-by-row is 28.8% faster. In this case, each row has 512 doubles and
+there are 1024 rows. As an aside, I ported the prior C code snippet to Rust and
+used [criterion](https://github.com/bheisler/criterion.rs) for the benchmarking
+just to get a handle of how microbenchmarks can be carried out in Rust.
+
+Regardless, in both cases, we see what's referred to as a **stride pattern**.
+The row-by-row version exhibits a _stride-1_ pattern - the best-case for spatial
+locality. The column-by-column version exhibits a _stride-N_ pattern, the larger
+N is the more spatial locality decreases.
 
 ## Key Takeaways so Far
 
