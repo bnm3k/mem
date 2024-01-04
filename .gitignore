@@ -1,2 +1,13 @@
 a.out
 .venv
+<<<<<<< HEAD
+||||||| d921115
+results/result.csv
+=======
+results/result.csv
+
+
+# Added by cargo
+
+/target
+>>>>>>> sum_by_row_vs_by_col_rust
