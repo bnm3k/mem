@@ -6,7 +6,7 @@
 FLAGS:=-Wall -g -O2 -D _GNU_SOURCE
 BIN:=a.out
 
-$(BIN): src/main.c src/bench.c src/clock.c
+$(BIN): main.c bench.c clock.c
 	gcc $(FLAGS) -o $@ $^ -lrt
 
 build: $(BIN)

@@ -1,4 +1,2 @@
 a.out
 .venv
-results/result.csv
-cachegrind.out.*
