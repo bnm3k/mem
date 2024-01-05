@@ -1,0 +1,9 @@
+description,L1 cache,L2 cache,L3 cache
+physical id,d,e,f
+slot,L1 Cache,L2 Cache,L3 Cache
+size,384KiB,1536KiB,12MiB
+capacity,384KiB,1536KiB,12MiB
+synchronous, true,true,true
+internal, true,true,true
+write-back, true,true,true
+unified, true ,true,true

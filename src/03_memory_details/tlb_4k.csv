@@ -1,0 +1,4 @@
+name, description, associativity (for 4K pages), num entries (for 4K pages)
+DTLB, data TLB, 4-way, 64
+ITLB, instruction TLB, 8-way, 64
+L2TLB, unified TLB, 6-way, 1536

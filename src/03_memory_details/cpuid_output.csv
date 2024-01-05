@@ -1,0 +1,11 @@
+cache                               ,L1d , L1i, L2, L3
+type                         ,data  ,instruction ,unified ,unified
+self-initializing cache level      ,true    ,true   ,true   ,true
+fully associative cache            ,false   ,false  ,false  ,false
+system coherency line size         ,64   ,64  ,64  ,64
+physical line partitions           ,1 ,1    ,1    ,1
+ways of associativity              ,8 ,8    ,4    ,16
+number of sets                     ,64   ,64  ,1024   ,12288
+inclusive to lower caches          ,false   ,false  ,false  ,true
+complex cache indexing             ,false   ,false  ,false  ,true
+size synth                       ,32 KB, 32 KB    ,256 KB    ,12 MB
