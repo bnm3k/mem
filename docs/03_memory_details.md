@@ -21,7 +21,7 @@ From the diagram:
 - At the third level, the L3 cache is shared across all cores. It's 12MB
 - There are 6 cores in total
 
-It's worth briefly introducing what NUMA means. From
+It's worth briefly introducing what **NUMA** means. From
 [wikipedia](https://en.wikipedia.org/wiki/Non-uniform_memory_access): "s a
 computer memory design used in multiprocessing, where the memory access time
 depends on the memory location relative to the processor". In my case though,
@@ -60,11 +60,11 @@ reported by `lscpu` (L1: 192KB, L2: 1.5MiB) and those reported by `lstopo` (L1:
 have 6 cores and L1 and L2 caches are private to each core, lscpu by default
 sums them up (192 = 32 * 6, 1.5 ≈ 0.256 * 6).
 
-For the address sizes, we see that there are two kinds of addresses: physical
-and virtual. Every byte of main memory has an address (i.e. the memory is
-byte-addressable). That address is what's called the physical address. Main
-memory is then divided into physical pages. With 39 bits of physical addressing,
-we can address up to 512 GB of main memory.
+For the address sizes, we see that there are two kinds of addresses: **physical
+and virtual addresses**. Every byte of main memory has an address (i.e. the
+memory is byte-addressable). That address is what's called the physical address.
+Main memory is then divided into physical pages. With 39 bits of physical
+addressing, we can address up to 512 GB of main memory.
 
 We've also got 48 bits of virtual addressing which can address up to 256 TB of
 virtual memory. Virtual memory is also divided into pages and any virtual page
@@ -121,15 +121,15 @@ Available output columns for -C:
          LEVEL  cache level
 ```
 
-At the first level, L1 is split into the instruction cache L1i and the data
-cache L1d as an optimization. L2 and L3 are unified which means they can hold
-either/both code instructions and data.
+At the first level, L1 is split into the **instruction cache** L1i and the
+**data cache** L1d as an optimization. L2 and L3 are unified which means they
+can hold either/both code instructions and data.
 
 Even though memory is byte addressable, it's cached in L1, L2 and L3 as 64 byte
 blocks. While in the cache, the block plus additional metadata form a _cache
 line_.
 
-As for _associativity_, let's start defining a 'fully associative cache': this
+As for **associativity**, let's start defining a 'fully associative cache': this
 is a cache where any block can be held in any cache line. It's the most flexible
 but also imposes the highest access costs (both in time taken and complexity of
 implementation). To reduce the cost, hardware designers divide caches into a
@@ -145,8 +145,8 @@ Know About Memory') demonstrates the result of increasing lines per set:
 
 ![cache size vs associativity](assets/mem_details/cache_size_vs_associativity.png)
 
-Another trade-off that's worth pointing out is the size of the cache. From the
-graph above, we get the least amount of cache hits with the largest cache
+Another trade-off that's worth pointing out is the **size of the cache**. From
+the graph above, we get the least amount of cache hits with the largest cache
 (16MB). However, it's hard and expensive to make a cache that's both large and
 fast, that's why L1 is the smallest but also the fastest, L2 is between and L3
 is the largest but slowest to access (though it's still way faster than
