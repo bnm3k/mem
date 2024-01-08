@@ -1,21 +1,5 @@
 # Optimizing CPU & Memory Interaction: Matrix Multiplication
 
-## TODO
-
-- Remove TODOs
-- array of structs vs struct of arrays?
-- cachegrind
-- perf?
-
-## References
-
-1. [Computer Systems: A Programmer's Perspective, 3rd Edition - O'Hallaron D.,
-   Bryant R. - Chapter 6 - The Memory Hierarchy](https://csapp.cs.cmu.edu/)
-2. [Matrix multiplication - wikipedia](https://en.wikipedia.org/wiki/Matrix_multiplication)
-3. [Caches(Writing) - Weatherspoon H. - Lecture slides](https://www.cs.cornell.edu/courses/cs3410/2013sp/lecture/18-caches3-w.pdf)
-4. [Lecture 12 - Cache Memories - Bryant R., Franchetti F., O'Hallaron D. - CMU 2015 Fall: 15-213 Introduction to Computer
-   Systems](https://www.cs.cmu.edu/afs/cs/academic/class/15213-f15/www/)
-
 ## Introduction
 
 Matrix multiplication is a classic example for demonstrating how memory access
@@ -138,7 +122,7 @@ As detailed in [1], writes are a bit more complex. There are two cases:
     Additionally, some evictions will result in writes to memory [3].
 - **write miss**: the address being written to isn't cached. We have two
   options:
-  - **write allocate**: Also called fetch-on-write, and as its alternate name
+  - **write allocate**: Also called fetch-on-write. As its alternate name
     suggests, it involves fetching the associated block from memory into cache,
     then treating it as a write hit (use either write-through or write-back
     approaches). Advantages: exploits locality especially if paired with the
@@ -146,9 +130,10 @@ As detailed in [1], writes are a bit more complex. There are two cases:
     transfer into the cache.
   - **no write allocate**: on a write-miss, bypass the cache and write the data
     unit directly to memory. The cached block has to be invalidated such that if
-    read soon after the write, it will result in a cache miss. There are
-    situations where no-write allocate is more advantageous, for example (TODO
-    memset, i-cache?)
+    read soon after the write, it should result in a cache miss. It's
+    advantageous in situations where we're writing to an object that won't be
+    read any time soon hence we can avoid allocating cache lines that won't get
+    used (cache pollution).
 
 Since write-back and write-allocate complement each other well with regards to
 locality, they are often paired.
@@ -201,17 +186,19 @@ second and so on.
 
 ![row-major traversal vs column-major traversal](assets/mm/traversals.svg)
 
-It is still the same from a correctness perspective (addition of doubles is
-commutative) and it still does the same amount of work from a
-theoretic/complexity perspective (`O(MN)`). However, its "actual" performance is
-quite poor compared to the prior row-by-row version. Given how 2-D arrays are
-laid out, it fails to take advantage of spatial locality. In fact, if `N` is set
-to the size of the cache, each inner-loop addition requires a fetch from a lower
-level and might even evict previous rows that we'll need to access again when
-summing up the next column. All these make the performance gap quite evident.
+It's still the same from a correctness perspective (though I'm not quite sure
+addition of doubles is commutative, but let's assume). And it still does the
+same amount of work from a theoretic/complexity perspective (`O(MN)`),
+particularly if we treat referencing random memory as a constant operation.
+However, its "actual" performance is quite poor compared to the prior row-by-row
+version. Given how 2-D arrays are laid out, it fails to take advantage of
+spatial locality. In fact, if `N` is set to the size of the cache, each
+inner-loop addition requires a fetch from a lower level and might even evict
+previous rows that we'll need to access again when summing up the next column.
+All these make the performance gap quite evident.
 
-When carrying out a benchmark to demonstrate the performance gap between
-summingrow-by-row vs column-by-column, I get the following results:
+When carrying out a benchmark to demonstrate the performance gap between summing
+row-by-row vs column-by-column, I get the following results:
 
 ![sum by row vs by col](assets/mm/sum_by_row_vs_by_col.svg)
 
@@ -264,8 +251,9 @@ for (i = 0; i < N; i++) {
 ```
 
 The outermost loop increments i, then the middle loop increments j, then the
-innermost loop increments k. We shall refer to this as the `ijk` version. Let's
-focus on the work being done in the innermost-loop:
+innermost loop increments k. We shall refer to this as the `ijk` version.
+
+Let's focus on the work being done in the innermost-loop:
 
 ```
 r += A[i][k] * B[k][j];
@@ -435,12 +423,43 @@ for (k = 0; k < N; k++) {
 
 ## Benchmark Results
 
+So far I've been alluding to the great performance of BC routines without
+showing the actual results. So without further ado, here's the graph comparing
+all the routines:
+
 ![Line chart comparing total cycles for each matrix multiplication routine](assets/mm/total_res.png)
+
+Routines within the same class have essentially the same performance, seeing as
+their graphs are indistinguishable. The graphs's divided into three regions, in
+the leftmost region, all data should fit entirely in L2; in the middle region,
+all the data should fit in L3; in the rightmost region, the data is larger than
+L3. However, I did make a mistake in the demarcation between L2 and L3, the size
+of L2 in the graph is larger than it should be. Nonetheless, we see that once
+data no longer fits in L3, the performance between the three classes starts
+diverging with the AC class routines getting significantly slower compared to
+the rest.
+
+We've also got the following:
 
 ![Line chart comparing cycles per inner-loop iteration for each matrix multiplication routine](assets/mm/per_iter_res.png)
 
-## Cache Analysis with Cachegrind
+In this, we measure how many cycles a single innermost loop takes, that is, one
+instance of the multiplication and addition. BC(kij & ikj) remains consistent
+throughout even as the number of elements increases. AB(ijk & jik) also remains
+consistent though it spends roughly twice the number of cycles as BC. However,
+with AC(jki and kji), once the data can no longer fit in L3, its performance
+degrades heavily since every iteration entail two separate memory accesses with
+the cache blocks not even getting re-used before they're evicted.
 
-A different way of comparing the matrix multiplication routines is via
-Cachegrind. This is a tool that takes a program, runs it against a simulated
-cache then provides cache usage and analysis.
+Regardless, as pointed out in [1], miss rate dominates performance which
+demonstrates the need for factoring cache usage when designing and optimizing
+algorithms.
+
+## References
+
+1. [Computer Systems: A Programmer's Perspective, 3rd Edition - O'Hallaron D.,
+   Bryant R. - Chapter 6 - The Memory Hierarchy](https://csapp.cs.cmu.edu/)
+2. [Matrix multiplication - wikipedia](https://en.wikipedia.org/wiki/Matrix_multiplication)
+3. [Caches(Writing) - Weatherspoon H. - Lecture slides](https://www.cs.cornell.edu/courses/cs3410/2013sp/lecture/18-caches3-w.pdf)
+4. [Lecture 12 - Cache Memories - Bryant R., Franchetti F., O'Hallaron D. - CMU 2015 Fall: 15-213 Introduction to Computer
+   Systems](https://www.cs.cmu.edu/afs/cs/academic/class/15213-f15/www/)
